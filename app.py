@@ -2,18 +2,14 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2 import service_account
+import json
 
 @st.cache_resource
 def load_gsheets():
-    creds_dict = dict(st.secrets)
-    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-    
+    creds_dict = json.loads(st.secrets["gcp_service_account"])
     creds = service_account.Credentials.from_service_account_info(creds_dict)
-    
     return gspread.authorize(creds)
 
-    creds = service_account.Credentials.from_service_account_info(creds_dict)
-    return gspread.authorize(creds)
 
 gc = load_gsheets()
 SHEET_ID = "1LXbDUJBoJWOtKngL7A9RFNBTFnEzRGGZ1GZT7hu0VIw"
