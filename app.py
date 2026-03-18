@@ -5,7 +5,7 @@ from google.oauth2 import service_account
 
 @st.cache_resource
 def load_gsheets():
-    creds = service_account.Credentials.from_service_account_info(st.secrets["GOOGLE_CREDENTIALS"])
+    creds = service_account.Credentials.from_service_account_info(st.secrets)
     gc = gspread.authorize(creds)
     return gc
 
