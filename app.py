@@ -67,15 +67,32 @@ filtro_estado = st.sidebar.multiselect(
 )
 filtro_cliente = st.sidebar.text_input("Buscar cliente:")
 
-df_filtrado = df[df["Estado"].isin(filtro_estado)]
+df_filtrado = df[df["Estado"].isin(filtro_estado)].copy()
 if filtro_cliente:
     df_filtrado = df_filtrado[
         df_filtrado["Cliente"].str.contains(filtro_cliente, case=False, na=False)
     ]
 
-st.caption(f"Mostrando {len(df_filtrado)} de {total} registros")
+# --- Función de colores ---
+def colorear_estado(val):
+    if val == "Contactado":
+        return "background-color: #1e7e34; color: white; border-radius: 4px; font-weight: bold;"
+    elif val == "Pendiente":
+        return "background-color: #d4a017; color: white; border-radius: 4px; font-weight: bold;"
+    return ""
 
-# --- Tabla editable ---
+# --- Tabla con colores (solo visualización) ---
+st.subheader("Vista con estados")
+st.dataframe(
+    df_filtrado.style.applymap(colorear_estado, subset=["Estado"]),
+    use_container_width=True,
+    hide_index=True
+)
+
+st.markdown("---")
+
+# --- Editor para cambiar estados ---
+st.subheader("✏️ Editar estados")
 edited = st.data_editor(
     df_filtrado,
     column_config={
@@ -93,17 +110,14 @@ edited = st.data_editor(
 col_save, col_export = st.columns([1, 4])
 
 if col_save.button("💾 Guardar cambios", type="primary"):
-    # Actualizar solo filas editadas en el df original
     for idx, row in edited.iterrows():
         df.loc[df["Número de Venta"] == row["Número de Venta"], "Estado"] = row["Estado"]
-    
     ws.clear()
     ws.update([df.columns.values.tolist()] + df.values.tolist())
     st.success(f"✅ Cambios guardados en **{hoja_seleccionada}**!")
     st.cache_resource.clear()
     st.rerun()
 
-# --- Exportar pendientes ---
 if col_export.download_button(
     "📥 Exportar pendientes CSV",
     data=df[df["Estado"] == "Pendiente"].to_csv(index=False).encode("utf-8"),
