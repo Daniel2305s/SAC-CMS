@@ -7,7 +7,13 @@ from google.oauth2 import service_account
 def load_gsheets():
     creds_dict = dict(st.secrets)
     creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+    
     creds = service_account.Credentials.from_service_account_info(creds_dict)
+    
+    return gspread.authorize(creds)
+
+    creds = service_account.Credentials.from_service_account_info(creds_dict)
+    return gspread.authorize(creds)
 
 gc = load_gsheets()
 SHEET_ID = "1LXbDUJBoJWOtKngL7A9RFNBTFnEzRGGZ1GZT7hu0VIw"
