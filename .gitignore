@@ -1,0 +1,15 @@
+# Credenciales y secrets
+service_account.json
+.streamlit/secrets.toml
+
+# Python cache
+__pycache__/
+*.pyc
+.env
+
+# IDEs
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
