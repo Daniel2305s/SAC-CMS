@@ -18,20 +18,38 @@ def load_gsheets():
     return gspread.authorize(creds)
 
 
-gc = load_gsheets()
+# --- Constantes ---
 SHEET_ID = "1LXbDUJBoJWOtKngL7A9RFNBTFnEzRGGZ1GZT7hu0VIw"
 
+ESTADOS = {
+    "Pendiente": "🟡 Pendiente",
+    "Contactado": "🟢 Contactado"
+}
+ESTADOS_REVERSO = {v: k for k, v in ESTADOS.items()}
+
+# --- Configuración página ---
 st.set_page_config(layout="wide", page_title="CRM Reseñas Google")
 st.title("⭐ CRM Seguimiento Reseñas Google")
 
+# --- Cargar cliente sheets ---
+gc = load_gsheets()
 sh = gc.open_by_key(SHEET_ID)
 hojas = [ws.title for ws in sh.worksheets()]
 
-# Sidebar con selección de canal
+# --- Sidebar ---
 st.sidebar.title("📦 Canal de Venta")
 hoja_seleccionada = st.sidebar.radio("Selecciona canal:", hojas)
 
-# Cargar datos del canal seleccionado
+st.sidebar.markdown("---")
+st.sidebar.subheader("🔍 Filtros")
+filtro_estado = st.sidebar.multiselect(
+    "Estado:",
+    options=list(ESTADOS.values()),
+    default=list(ESTADOS.values())
+)
+filtro_cliente = st.sidebar.text_input("Buscar cliente:")
+
+# --- Cargar datos del canal ---
 ws = sh.worksheet(hoja_seleccionada)
 data = ws.get_all_values()
 
@@ -42,12 +60,14 @@ if len(data) < 2:
 df = pd.DataFrame(data[1:], columns=data[0])
 df = df[df["Número de Venta"].str.strip() != ""].reset_index(drop=True)
 
+# Agregar/normalizar columna Estado
 if "Estado" not in df.columns:
-    df["Estado"] = ""
+    df["Estado"] = "Pendiente"
+df["Estado"] = df["Estado"].fillna("").apply(
+    lambda x: x if x.strip() != "" else "Pendiente"
+)
 
-df["Estado"] = df["Estado"].fillna("").replace("", "Pendiente")
-
-# --- KPIs del canal ---
+# --- KPIs ---
 total = len(df)
 pendientes = len(df[df["Estado"] == "Pendiente"])
 contactados = len(df[df["Estado"] == "Contactado"])
@@ -55,50 +75,32 @@ contactados = len(df[df["Estado"] == "Contactado"])
 st.header(f"📋 {hoja_seleccionada}")
 
 col1, col2, col3 = st.columns(3)
-col1.metric("Total clientes", total)
-col2.metric("⏳ Pendientes", pendientes)
-col3.metric("✅ Contactados", contactados)
+col1.metric("📦 Total clientes", total)
+col2.metric("🟡 Pendientes", pendientes)
+col3.metric("🟢 Contactados", contactados)
 
-# --- Filtros ---
-st.sidebar.markdown("---")
-st.sidebar.subheader("Filtros")
-filtro_estado = st.sidebar.multiselect(
-    "Estado:", ["Pendiente", "Contactado"], default=["Pendiente", "Contactado"]
-)
-filtro_cliente = st.sidebar.text_input("Buscar cliente:")
+st.markdown("---")
 
-df_filtrado = df[df["Estado"].isin(filtro_estado)].copy()
+# --- Aplicar emojis al DataFrame para mostrar ---
+df_visual = df.copy()
+df_visual["Estado"] = df_visual["Estado"].map(lambda x: ESTADOS.get(x, x))
+
+# --- Aplicar filtros ---
+df_filtrado = df_visual[df_visual["Estado"].isin(filtro_estado)].copy()
 if filtro_cliente:
     df_filtrado = df_filtrado[
         df_filtrado["Cliente"].str.contains(filtro_cliente, case=False, na=False)
     ]
 
-# --- Función de colores ---
-def colorear_estado(val):
-    if val == "Contactado":
-        return "background-color: #1e7e34; color: white; border-radius: 4px; font-weight: bold;"
-    elif val == "Pendiente":
-        return "background-color: #d4a017; color: white; border-radius: 4px; font-weight: bold;"
-    return ""
+st.caption(f"Mostrando {len(df_filtrado)} de {total} registros")
 
-# --- Tabla con colores (solo visualización) ---
-st.subheader("Vista con estados")
-st.dataframe(
-    df_filtrado.style.applymap(colorear_estado, subset=["Estado"]),
-    use_container_width=True,
-    hide_index=True
-)
-
-st.markdown("---")
-
-# --- Editor para cambiar estados ---
-st.subheader("✏️ Editar estados")
+# --- Tabla editable con emojis ---
 edited = st.data_editor(
     df_filtrado,
     column_config={
         "Estado": st.column_config.SelectboxColumn(
             "Estado",
-            options=["Pendiente", "Contactado"],
+            options=list(ESTADOS.values()),
             required=True
         )
     },
@@ -106,22 +108,29 @@ edited = st.data_editor(
     use_container_width=True
 )
 
-# --- Guardar ---
+# --- Botones ---
 col_save, col_export = st.columns([1, 4])
 
 if col_save.button("💾 Guardar cambios", type="primary"):
-    for idx, row in edited.iterrows():
-        df.loc[df["Número de Venta"] == row["Número de Venta"], "Estado"] = row["Estado"]
+    # Revertir emojis antes de guardar
+    edited["Estado"] = edited["Estado"].map(
+        lambda x: ESTADOS_REVERSO.get(x, x)
+    )
+    # Actualizar df original con cambios editados
+    for _, row in edited.iterrows():
+        mask = df["Número de Venta"] == row["Número de Venta"]
+        df.loc[mask, "Estado"] = row["Estado"]
+
+    # Escribir en Google Sheets
     ws.clear()
     ws.update([df.columns.values.tolist()] + df.values.tolist())
     st.success(f"✅ Cambios guardados en **{hoja_seleccionada}**!")
     st.cache_resource.clear()
     st.rerun()
 
-if col_export.download_button(
-    "📥 Exportar pendientes CSV",
+col_export.download_button(
+    label="📥 Exportar pendientes CSV",
     data=df[df["Estado"] == "Pendiente"].to_csv(index=False).encode("utf-8"),
     file_name=f"pendientes_{hoja_seleccionada}.csv",
     mime="text/csv"
-):
-    pass
+)
