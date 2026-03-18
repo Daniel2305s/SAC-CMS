@@ -4,10 +4,17 @@ import gspread
 from google.oauth2 import service_account
 import json
 
+import json
+
 @st.cache_resource
 def load_gsheets():
     creds_dict = json.loads(st.secrets["gcp_service_account"])
-    creds = service_account.Credentials.from_service_account_info(creds_dict)
+
+    creds = service_account.Credentials.from_service_account_info(
+        creds_dict,
+        scopes=["https://www.googleapis.com/auth/spreadsheets"]
+    )
+
     return gspread.authorize(creds)
 
 
