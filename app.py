@@ -75,7 +75,7 @@ devueltos = len(df[df["Estado"] == "Devuelto"])
 
 st.header(f"📋 {hoja_seleccionada}")
 
-col1, col2, col3, col4 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 col1.metric("📦 Total clientes", total)
 col2.metric("🟡 Pendientes", pendientes)
 col3.metric("🟢 Contactados", contactados)
