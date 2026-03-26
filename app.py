@@ -4,7 +4,6 @@ import gspread
 from google.oauth2 import service_account
 import json
 
-import json
 
 @st.cache_resource
 def load_gsheets():
@@ -24,6 +23,7 @@ SHEET_ID = "1LXbDUJBoJWOtKngL7A9RFNBTFnEzRGGZ1GZT7hu0VIw"
 ESTADOS = {
     "Pendiente": "🟡 Pendiente",
     "Contactado": "🟢 Contactado"
+    "Devuelto": "🤑 Bono OK"
 }
 ESTADOS_REVERSO = {v: k for k, v in ESTADOS.items()}
 
@@ -71,6 +71,7 @@ df["Estado"] = df["Estado"].fillna("").apply(
 total = len(df)
 pendientes = len(df[df["Estado"] == "Pendiente"])
 contactados = len(df[df["Estado"] == "Contactado"])
+devueltos = len(df[df["Estado"] == "Devuelto"])
 
 st.header(f"📋 {hoja_seleccionada}")
 
@@ -78,6 +79,7 @@ col1, col2, col3 = st.columns(3)
 col1.metric("📦 Total clientes", total)
 col2.metric("🟡 Pendientes", pendientes)
 col3.metric("🟢 Contactados", contactados)
+col4.metric("🤑 Bono OK", devueltos)
 
 st.markdown("---")
 
