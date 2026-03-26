@@ -22,7 +22,7 @@ SHEET_ID = "1LXbDUJBoJWOtKngL7A9RFNBTFnEzRGGZ1GZT7hu0VIw"
 
 ESTADOS = {
     "Pendiente": "🟡 Pendiente",
-    "Contactado": "🟢 Contactado"
+    "Contactado": "🟢 Contactado",
     "Devuelto": "🤑 Bono OK"
 }
 ESTADOS_REVERSO = {v: k for k, v in ESTADOS.items()}
